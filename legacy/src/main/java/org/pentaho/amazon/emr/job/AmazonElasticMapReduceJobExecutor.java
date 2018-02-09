@@ -60,7 +60,11 @@ import org.pentaho.hadoop.shim.spi.HadoopShim;
 import org.pentaho.metastore.api.IMetaStore;
 import org.w3c.dom.Node;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduce;
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient;
+import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClientBuilder;
 import com.amazonaws.services.elasticmapreduce.model.AddJobFlowStepsRequest;
 import com.amazonaws.services.elasticmapreduce.model.DescribeClusterRequest;
 import com.amazonaws.services.elasticmapreduce.model.DescribeClusterResult;
@@ -125,8 +129,7 @@ public class AmazonElasticMapReduceJobExecutor extends AbstractAmazonJobEntry im
 
     try {
       // create/connect aws service
-      AmazonElasticMapReduceClient emrClient = new AmazonElasticMapReduceClient( awsCredentials );
-
+      AmazonElasticMapReduce emrClient = AmazonElasticMapReduceClientBuilder.standard().withRegion(Regions.US_WEST_2).withCredentials(new AWSStaticCredentialsProvider(awsCredentials)).build();
       // pull down jar from vfs
       FileObject jarFile = KettleVFS.getFileObject( buildFilename( jarUrl ) );
       File tmpFile = File.createTempFile( "customEMR", "jar" );
@@ -367,6 +370,9 @@ public class AmazonElasticMapReduceJobExecutor extends AbstractAmazonJobEntry im
     if ( "TERMINATED".equalsIgnoreCase( state ) ) {
       return false;
     }
+    if ( "TERMINATED_WITH_ERRORS".equalsIgnoreCase( state ) ) {
+        return false;
+      }
     return true;
   }
 

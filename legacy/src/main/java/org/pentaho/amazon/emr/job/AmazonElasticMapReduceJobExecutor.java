@@ -62,6 +62,8 @@ import org.w3c.dom.Node;
 
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient;
 import com.amazonaws.services.elasticmapreduce.model.AddJobFlowStepsRequest;
+import com.amazonaws.services.elasticmapreduce.model.DescribeClusterRequest;
+import com.amazonaws.services.elasticmapreduce.model.DescribeClusterResult;
 import com.amazonaws.services.elasticmapreduce.model.DescribeJobFlowsRequest;
 import com.amazonaws.services.elasticmapreduce.model.DescribeJobFlowsResult;
 import com.amazonaws.services.elasticmapreduce.model.HadoopJarStepConfig;
@@ -222,18 +224,13 @@ public class AmazonElasticMapReduceJobExecutor extends AbstractAmazonJobEntry im
             }
 
             while ( isRunning( executionState ) ) {
-              DescribeJobFlowsRequest describeJobFlowsRequest = new DescribeJobFlowsRequest();
-              describeJobFlowsRequest.setJobFlowIds( jobFlowIds );
+            	DescribeClusterRequest describeClusterRequest = new DescribeClusterRequest();
+            	describeClusterRequest.setClusterId( id );
 
-              DescribeJobFlowsResult describeJobFlowsResult = emrClient.describeJobFlows( describeJobFlowsRequest );
+              DescribeClusterResult describeJobFlowsResult = emrClient.describeCluster(describeClusterRequest);
               boolean found = false;
-              for ( JobFlowDetail jobFlowDetail : describeJobFlowsResult.getJobFlows() ) {
-                if ( jobFlowDetail.getJobFlowId().equals( id ) ) {
-                  executionState = jobFlowDetail.getExecutionStatusDetail().getState();
-                  found = true;
-                }
-              }
-
+              executionState = describeJobFlowsResult.getCluster().getStatus().getState();
+              found = true;
               if ( !found ) {
                 break;
               }
@@ -324,14 +321,17 @@ public class AmazonElasticMapReduceJobExecutor extends AbstractAmazonJobEntry im
     instances.setInstanceCount( numInsts );
     instances.setMasterInstanceType( getInstanceType( masterInstanceType ) );
     instances.setSlaveInstanceType( getInstanceType( slaveInstanceType ) );
-    instances.setHadoopVersion( "0.20" );
+    //instances.setHadoopVersion( "0.20" );
 
     RunJobFlowRequest runJobFlowRequest = new RunJobFlowRequest();
     runJobFlowRequest.setSteps( steps );
     runJobFlowRequest.setLogUri( stagingS3BucketUrl );
     runJobFlowRequest.setName( hadoopJobName );
     runJobFlowRequest.setInstances( instances );
-
+    runJobFlowRequest.withJobFlowRole("EMR_EC2_DefaultRole");
+    runJobFlowRequest.withServiceRole("EMR_DefaultRole");
+    runJobFlowRequest.withReleaseLabel("emr-5.11.1");
+    //runJobFlowRequest.withAmiVersion("latest");
     // ScriptBootstrapActionConfig scriptBootstrapAction = new ScriptBootstrapActionConfig();
     // scriptBootstrapAction.setPath("s3://mddwordcount/bootstrap.sh");
     // List<String> bootstrapArgs = new ArrayList<String>();
